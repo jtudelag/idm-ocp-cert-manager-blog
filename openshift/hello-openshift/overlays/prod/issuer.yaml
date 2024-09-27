@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: idm-prod
+spec:
+  acme:
+    preferredChain: ""
+    privateKeySecretRef:
+      name: idm-prod-issuer-private-key
+    server: https://idm2.acme.stereotype.com/acme/directory
+    solvers:
+    - http01:
+        ingress:
+          ingressClassName: openshift-default

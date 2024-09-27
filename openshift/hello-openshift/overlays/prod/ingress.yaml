@@ -2,8 +2,8 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    cert-manager.io/cluster-issuer: idm-issuer
-  name: hello-openshift
+    cert-manager.io/issuer: idm-prod
+  name: hello-openshift-prod
 spec:
   ingressClassName: openshift-default
   rules:
