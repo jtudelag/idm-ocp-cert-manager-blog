@@ -1,0 +1,16 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-cert-manager-operator
+  namespace: cert-manager-operator
+spec:
+  channel: stable-v1
+  config:
+    env:
+    - name: TRUSTED_CA_CONFIGMAP_NAME
+      value: trusted-ca
+  installPlanApproval: Automatic
+  name: openshift-cert-manager-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  startingCSV: cert-manager-operator.v1.14.0
