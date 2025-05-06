@@ -1,0 +1,7 @@
+collections:
+- name: community.general
+  version: 10.6.0
+- name: redhat.rhel_system_roles
+  version: 1.88.9
+- name: redhat.rhel_idm
+  version: 1.13.2
