@@ -1,0 +1,38 @@
+---
+- name: Playbook to configure IPA server
+  hosts: ipaserver
+  become: true
+  vars:
+   # https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/installing_identity_management/preparing-the-system-for-ipa-server-installation_installing-identity-management#port-requirements-for-idm_preparing-the-system-for-ipa-server-installation
+   firewall:
+     - service: dns #53
+       state: enabled
+       permanent: true
+     - service: http #80
+       state: enabled
+       permanent: true
+     - service: kerberos #88
+       state: enabled
+       permanent: true
+     - service: ldap #389
+       state: enabled
+       permanent: true
+     - service: https #443
+       state: enabled
+       permanent: true
+     - service: kpasswd #464
+       state: enabled
+       permanent: true
+     - service: ldaps #636
+       state: enabled
+       permanent: true
+       
+    
+  pre_tasks:
+
+  - name: Set timezone
+    community.general.timezone:
+      name: 'Europe/Madrid'
+
+  roles:
+  - role: rhel-system-roles.firewall
