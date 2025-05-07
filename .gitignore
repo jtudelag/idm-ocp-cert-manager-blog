@@ -1,3 +1,4 @@
 ansible/*.env
 ansible/ansible-navigator.log
 ansible/ansible.cfg
+ansible/sshkeys/
