@@ -1,2 +1,2 @@
 ansible/*.env
-
+ansible/ansible-navigator.log
