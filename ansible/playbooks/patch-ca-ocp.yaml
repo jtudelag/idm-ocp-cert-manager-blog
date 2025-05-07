@@ -61,33 +61,3 @@
                 trustedCA:
                   name: "{{ configmap_ca_name }}"
       # END BLOCK
-#    
-#
-#    - name: Debug CoreDNS Instance
-#      ansible.builtin.debug:
-#        msg: "{{ coredns_instance_before }}"
-#        verbosity: 0
-#
-#    - name: Set IdM as a DNS resolver in OpenShift
-#      kubernetes.core.k8s:
-#        state: patched
-#        api_version: operator.openshift.io/v1
-#        kind: DNS
-#        name: default
-#        merge_type: merge
-#        definition:
-#          spec:
-#            servers:
-#              - name: idm-private-zone
-#                zones:
-#                - "{{ idm_domain }}"
-#                forwardPlugin:
-#                  policy: Random
-#                  upstreams:
-#                  - "{{ idm_private_ip }}"
-#      register: coredns_instance_patched
-#
-#    - name: Debug CoreDNS Instance
-#      ansible.builtin.debug:
-#        msg: "{{ coredns_instance_patched }}"
-#        verbosity: 0
