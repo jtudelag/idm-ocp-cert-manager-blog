@@ -1,0 +1,12 @@
+---
+- name: Run IdM pre-reqs playbook
+  ansible.builtin.import_playbook: playbooks/prereqs.yaml
+
+- name: Run IdM install playbook
+  ansible.builtin.import_playbook: playbooks/install.yaml
+
+- name: Patch OpenShift with IdM CA
+  ansible.builtin.import_playbook: playbooks/patch-ca-ocp.yaml
+
+- name: Patch OpenShift to forward private dns zone queires to IdM
+  ansible.builtin.import_playbook: playbooks/patch-coredns-ocp.yaml

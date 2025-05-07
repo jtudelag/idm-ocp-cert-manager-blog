@@ -1,0 +1,3 @@
+---
+- name: Deploy Azure VM for IdM
+  ansible.builtin.import_playbook: playbooks/deploy-azure-vm.yaml
