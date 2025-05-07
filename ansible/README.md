@@ -36,7 +36,7 @@ cp azure-example.env azure.env
 Add your env vars to the file and source it:
 ```bash
 vi azure.env
-source azure-env
+source azure.env
 ```
 
 Login into Azure using the `az` client:
@@ -49,13 +49,13 @@ az login --service-principal -u $CLIENT_ID -p $PASSWORD --tenant $TENANT
 For Ansible to be able to interact with OpenShift, it consumes the kubeconfig at `~/.kube/config`.
 So we need to login into the OpenShift cluster so the `oc` generates the kubeconfig automatically.
 
-The user we login into Openshift needs to have OpenShift `cluster-admin` permissions.
+The user we login into OpenShift needs to have `cluster-admin` permissions.
 ```bash
 oc login url --token=.....
 ```
 ## Deploy Azure VM for IdM
 
-Assuming you already have an aro cluster deployed and all the required Azure resources already
+Assuming you already have an ARO cluster deployed and all the required Azure resources already
 created: Resource Group, Network, Subnets, etc.
 
 Create an Ansible inventory and fill the variables that are marked with `<CHANGE_ME>`.
@@ -67,8 +67,7 @@ Run the `deploy-idm-vm-azure.yaml` playbook:
 ```bash
 ansible-navigator -vvv --ee false -m stdout run -i inventory --pae false deploy-idm-vm-azure.yaml
 ```
-
-This Ansible playbook will create a RHEL9 VM with a public IP and network peering between IdM network and ARO network,
+This Ansible playbook will create a RHEL9 VM in Azure, with a public IP and network peering between IdM network and ARO network,
 for bidirectional communication between IdM and ARO nodes, required by the ACME protocol.
 
 ## Configure IdM and patch ARO OpenShift DNS and CA
