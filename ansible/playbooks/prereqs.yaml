@@ -1,0 +1,57 @@
+---
+- name: Playbook to configure IPA server
+  hosts: ipaserver
+  gather_facts: true
+  become: true
+  vars:
+   # https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/installing_identity_management/preparing-the-system-for-ipa-server-installation_installing-identity-management#port-requirements-for-idm_preparing-the-system-for-ipa-server-installation
+   firewall:
+     - service: dns #53
+       state: enabled
+       permanent: true
+     - service: http #80
+       state: enabled
+       permanent: true
+     - service: kerberos #88
+       state: enabled
+       permanent: true
+     - service: ldap #389
+       state: enabled
+       permanent: true
+     - service: https #443
+       state: enabled
+       permanent: true
+     - service: kpasswd #464
+       state: enabled
+       permanent: true
+     - service: ldaps #636
+       state: enabled
+       permanent: true
+       
+    
+  pre_tasks:
+
+  - name: Set timezone
+    community.general.timezone:
+      name: 'Europe/Madrid'
+
+  - name: Upgrade all packages
+    ansible.builtin.dnf:
+      name: "*"
+      state: latest
+    register: update_rpms
+  
+  - name: Reboot machine if any RPM updated, 120s of rimeout period
+    ansible.builtin.reboot:
+      reboot_timeout: 120
+    when: update_rpms.changed
+
+  #tasks:
+  #- role: fedora.linux_system_roles.firewall
+  #- ansible.builtin.import_role:
+  #    name: fedora.linux_system_roles.firewall
+  #  when: ansible_facts['distribution'] == 'Fedora'
+
+  roles:
+  - role: rhel-system-roles.firewall
+    when: ansible_facts['distribution'] == 'RedHat'

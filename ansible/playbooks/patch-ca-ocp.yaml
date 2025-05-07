@@ -1,0 +1,93 @@
+- name: Playbook to add IdM CA to OCP
+  #hosts: localhost
+  #connection: local
+  hosts: ipaserver
+  gather_facts: false
+  become: false
+  vars:
+    fetched_idm_ca_location: "/tmp/ca.crt"
+    configmap_ca_name: "ca-bundle"
+
+  pre_tasks:
+
+    - name: Fetch IdM CA
+      ansible.builtin.fetch:
+        src: /etc/ipa/ca.crt
+        dest: "{{ fetched_idm_ca_location }}"
+        flat: true
+      become: true
+
+    - name: Lookup IdM CA content into a file
+      ansible.builtin.set_fact:
+        idm_ca_content: "{{ lookup('ansible.builtin.file', fetched_idm_ca_location) }}"
+
+
+  tasks:
+
+    - name: Block to update OpenShift CA
+      delegate_to: localhost
+      block:
+        - name: Get Openshift CoreDNS config
+          kubernetes.core.k8s_info:
+            api_version: operator.openshift.io/v1
+            kind: DNS
+            name: default
+          register: coredns_instance_before
+
+        - name: Create configmap with IdM CA
+          kubernetes.core.k8s:
+            namespace: openshift-config
+            definition:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: "{{ configmap_ca_name }}"
+              data:
+                ca-bundle.crt: |
+                  {{ idm_ca_content }}
+            apply: yes
+            server_side_apply:
+              field_manager: ansible 
+
+        - name: Patch OpenShift Proxy object with IdM CA
+          kubernetes.core.k8s:
+            state: patched
+            kind: Proxy
+            api_version: config.openshift.io/v1
+            name: cluster
+            merge_type: merge
+            definition:
+              spec:
+                trustedCA:
+                  name: "{{ configmap_ca_name }}"
+      # END BLOCK
+#    
+#
+#    - name: Debug CoreDNS Instance
+#      ansible.builtin.debug:
+#        msg: "{{ coredns_instance_before }}"
+#        verbosity: 0
+#
+#    - name: Set IdM as a DNS resolver in OpenShift
+#      kubernetes.core.k8s:
+#        state: patched
+#        api_version: operator.openshift.io/v1
+#        kind: DNS
+#        name: default
+#        merge_type: merge
+#        definition:
+#          spec:
+#            servers:
+#              - name: idm-private-zone
+#                zones:
+#                - "{{ idm_domain }}"
+#                forwardPlugin:
+#                  policy: Random
+#                  upstreams:
+#                  - "{{ idm_private_ip }}"
+#      register: coredns_instance_patched
+#
+#    - name: Debug CoreDNS Instance
+#      ansible.builtin.debug:
+#        msg: "{{ coredns_instance_patched }}"
+#        verbosity: 0

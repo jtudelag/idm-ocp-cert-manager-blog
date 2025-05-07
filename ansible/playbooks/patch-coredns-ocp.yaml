@@ -1,0 +1,73 @@
+- name: Playbook to patch OpenShift CoreDNS to forward internal queries to IdM
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  become: false
+
+  pre_tasks:
+
+    ## Could ont make this work with delegate_to and delegate_facts...
+    #- name: Gather IdM private IP
+    #  ansible.builtin.setup:
+    #    filter:
+    #    - 'default_ipv4'
+    #  delegate_to: ipaserver
+    #  delegate_facts: true
+
+    - name: Get facts for IdM network interface
+      azure_rm_networkinterface_info:
+        resource_group: "{{ azure_vm_resource_group }}"
+        name: "{{ azure_vm_nic }}"
+      register: azure_nic_info
+
+    - name: Debug IdM NIC facts 
+      ansible.builtin.debug:
+        msg: "{{ azure_nic_info }}"
+        verbosity: 1 
+
+    - name: Debug IdM private IP
+      ansible.builtin.debug:
+        msg: "{{ azure_nic_info.networkinterfaces[0].ip_configurations[0].private_ip_address }}"
+        verbosity: 1
+
+    - name: Set fact, IdM private IP
+      ansible.builtin.set_fact:
+        idm_private_ip: "{{ azure_nic_info.networkinterfaces[0].ip_configurations[0].private_ip_address }}"
+
+  tasks:
+
+    - name: Get Openshift CoreDNS config
+      kubernetes.core.k8s_info:
+        api_version: operator.openshift.io/v1
+        kind: DNS
+        name: default
+      register: coredns_instance_before
+
+    - name: Debug CoreDNS Instance
+      ansible.builtin.debug:
+        msg: "{{ coredns_instance_before }}"
+        verbosity: 0
+
+    - name: Set IdM as a DNS resolver in OpenShift
+      kubernetes.core.k8s:
+        state: patched
+        api_version: operator.openshift.io/v1
+        kind: DNS
+        name: default
+        merge_type: merge
+        definition:
+          spec:
+            servers:
+              - name: idm-private-zone
+                zones:
+                - "{{ idm_domain }}"
+                forwardPlugin:
+                  policy: Random
+                  upstreams:
+                  - "{{ idm_private_ip }}"
+      register: coredns_instance_patched
+
+    - name: Debug CoreDNS Instance
+      ansible.builtin.debug:
+        msg: "{{ coredns_instance_patched }}"
+        verbosity: 0

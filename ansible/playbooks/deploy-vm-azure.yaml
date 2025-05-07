@@ -1,0 +1,108 @@
+- name: Playbook to deploy a VM in Azure
+  hosts: localhost
+  connection: local
+  become: false
+
+  pre_tasks:
+
+    - name: Check if SSH key exist
+      stat:
+        path: "{{ local_sshkey_file }}" 
+      register: file_status
+
+    - name: Create SSH key if it does not exist
+      when: not file_status.stat.exists
+      block:
+       - name: Create SSH key folder
+         ansible.builtin.file:
+           path: "{{ local_sshkey_folder }}"
+           state: directory
+           #mode: '0755' 
+       - name: Create SSH key 
+         ansible.builtin.shell: |
+           ssh-keygen -t rsa -q -f "{{ local_sshkey_file }}" -N "" 
+
+  tasks:
+
+    - name: Create public IP address
+      azure_rm_publicipaddress:
+        resource_group: "{{ azure_vm_resource_group }}"
+        allocation_method: Static
+        name: "{{ azure_vm_public_ip }}"
+      register: output_ip_address
+
+    - name: Public IP of VM
+      debug:
+        msg: "The public IP is {{ output_ip_address.state.ip_address }}."
+
+    - name: Create Network Security Group that allows SSH and HTTPS
+      azure_rm_securitygroup:
+        resource_group: "{{ azure_vm_resource_group }}"
+        name: "{{ azure_vm_sg }}"
+        rules:
+          - name: SSH
+            protocol: Tcp
+            destination_port_range: 22
+            access: Allow
+            priority: 1001
+            direction: Inbound
+          - name: HTTPS
+            protocol: Tcp
+            destination_port_range: 443
+            access: Allow
+            priority: 1002
+            direction: Inbound
+
+    - name: Create virtual network interface card
+      azure_rm_networkinterface:
+        resource_group: "{{ azure_vm_resource_group }}"
+        name: "{{ azure_vm_nic }}"
+        virtual_network: "{{ azure_vm_network }}"
+        subnet: "{{ azure_vm_subnet }}"
+        security_group: "{{ azure_vm_sg }}"
+        ip_configurations:
+          - name: ipconfig1
+            public_ip_address_name: "{{ azure_vm_public_ip }}"
+            primary: true
+
+    - name: Create IdM VM
+      azure_rm_virtualmachine:
+        resource_group: "{{ azure_vm_resource_group }}"
+        name: "{{ azure_vm_name }}"
+        vm_size: "{{ azure_vm_size }}"
+        managed_disk_type: Standard_LRS
+        admin_username: "{{ azure_vm_admin_user }}"
+        ssh_password_enabled: false
+        ssh_public_keys:
+          - path: "/home/{{ azure_vm_admin_user }}/.ssh/authorized_keys"
+            key_data: "{{ lookup('ansible.builtin.file', local_sshkey_pub_file) }}"
+        network_interfaces: "{{ azure_vm_nic }}"
+        image:
+          offer: "{{ azure_vm_image_offer }}"
+          publisher: "{{ azure_vm_image_publisher }}"
+          sku: "{{ azure_vm_image_sku }}"
+          version: "{{ azure_vm_image_version }}"
+      
+  post_tasks:
+
+    - name: Create network peering IdM -> ARO
+      azure_rm_virtualnetworkpeering:
+      resource_group: "{{ azure_vm_resource_group }}"
+      virtual_network: "{{ azure_vm_network }}"
+      name: idm-to-aro-peering
+      remote_virtual_network:
+        resource_group: "{{ aro_resource_group }}"
+        name: "{{ aro_network }}"
+      allow_virtual_network_access: true
+      allow_forwarded_traffic: true
+
+    - name: Create network peering ARO -> IdM
+      azure_rm_virtualnetworkpeering:
+      resource_group: "{{ aro_resource_group }}"
+      virtual_network: "{{ aro_network }}"
+      name: idm-to-aro-peering
+      remote_virtual_network:
+        resource_group: "{{ azure_vm_resource_group }}"
+        name: "{{ azure_vm_network }}"
+      allow_virtual_network_access: true
+      allow_forwarded_traffic: true

@@ -1,0 +1,28 @@
+- name: Playbook to deploy a VM in Azure
+  hosts: localhost
+  connection: local
+  become: false
+      
+  tasks:
+
+    - name: Create network peering IdM -> ARO
+      azure_rm_virtualnetworkpeering:
+        resource_group: "{{ azure_vm_resource_group }}"
+        virtual_network: "{{ azure_vm_network }}"
+        name: idm-to-aro-peering-ansible
+        remote_virtual_network:
+          resource_group: "{{ aro_network_resource_group }}"
+          name: "{{ aro_network }}"
+        allow_virtual_network_access: true
+        allow_forwarded_traffic: true
+
+    - name: Create network peering ARO -> IdM
+      azure_rm_virtualnetworkpeering:
+        resource_group: "{{ aro_network_resource_group }}"
+        virtual_network: "{{ aro_network }}"
+        name: idm-to-aro-peering-ansible
+        remote_virtual_network:
+          resource_group: "{{ azure_vm_resource_group }}"
+          name: "{{ azure_vm_network }}"
+        allow_virtual_network_access: true
+        allow_forwarded_traffic: true
