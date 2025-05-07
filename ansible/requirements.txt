@@ -1,0 +1,3 @@
+ansible[azure]
+oauthlib==3.2.2
+kubernetes
